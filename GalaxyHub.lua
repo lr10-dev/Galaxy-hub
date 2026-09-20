@@ -563,7 +563,7 @@ TextChatService.TextChannels.ChildAdded:Connect(function(ch)
     ConectarCanal(ch)
 end)
 
---// Painel Nytherune Hub (WindUI) - exibido para todos
+--// Painel Galaxy Hub (WindUI) - exibido para todos
 local ok, WindUILib = pcall(function()
     return loadstring(game:HttpGet("https://github.com/Footagesus/WindUI/releases/latest/download/main.lua"))()
 end)
