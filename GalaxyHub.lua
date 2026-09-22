@@ -6,7 +6,7 @@ end)
 
 game:GetService("ReplicatedStorage").RE["1RPNam1eTex1t"]:FireServer(table.unpack({
     [1] = "RolePlayBio",
-    [2] = "Bazuka Is The Best Dev",
+    [2] = "Galaxy team Is The Best Dev",
 }))
 
 game:GetService("ReplicatedStorage").RE["1RPNam1eTex1t"]:FireServer(table.unpack({
@@ -28,7 +28,7 @@ local redzlib = loadstring(game:HttpGet("https://raw.githubusercontent.com/topar
 
 local Window = redzlib:MakeWindow({
     Title = "た Galaxy Hub",
-    SubTitle = "by Bazuka ",
+    SubTitle = "by Galaxy team ",
     SaveFolder = "Hi Skidder"
   })
 
@@ -130,7 +130,7 @@ local Paragraph = Tab1:AddParagraph({"Execultor", executorName})
 
 local Section = Tab1:AddSection({"Owners/Developers"})
 
-local Paragraph = Tab1:AddParagraph({"Criadores", "Bazuka\nLolyta"})
+local Paragraph = Tab1:AddParagraph({"Criadores", "Galaxy team\nLolyta"})
 
 local Section = Tab1:AddSection({"Version of the Hub"})
 
@@ -232,7 +232,7 @@ end
 Tab3:AddTextBox({
     Name = "Nome do Jogador",
     Description = "Digite parte do nome",
-    PlaceholderText = "ex: Ba → Bazuka",
+    PlaceholderText = "ex: Ba → Galaxy team",
     Callback = function(Value)
         local foundPlayer = findPlayerByPartialName(Value)
         if foundPlayer then
@@ -4319,10 +4319,10 @@ print("Kill All Couch button created")
 Tab11:AddSection({ "Trolling Map" })
 
 
-Tab11:AddSection({ "Skybox by Bazuka" })
+Tab11:AddSection({ "Skybox by Galaxy team" })
 Tab11:AddParagraph({ "Warn", "This SkyBox not is visual" })
 Tab11:AddButton({
- Name = "Skybox by Bazuka",
+ Name = "Skybox by Galaxy team",
  Callback = function()
    loadstring(game:HttpGet("https://api.rubis.app/v2/scrap/qZkSict1retkqFIr/raw"))()
    end
