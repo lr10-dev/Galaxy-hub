@@ -5899,95 +5899,156 @@ Tab2:AddButton({
 local ADMPanel = Window:MakeTab({"ADM Panel", "shield"})
 local GalaxyAdmins = { eobli7 = true }
 local adminInput = ""
+local targetInput = ""
+local speedInput = 16
 
-ADMPanel:AddSection({"Galaxy Hub • Gerenciar administradores"})
-ADMPanel:AddSection({"Lista local da sessão; permissões reais devem ser validadas no servidor."})
-
-ADMPanel:AddTextBox({
-    Name = "Username do Admin",
-    Description = "Digite o nome exato do jogador",
-    PlaceholderText = "ex: NomeDoJogador",
-    Callback = function(Value)
-        adminInput = tostring(Value or ""):gsub("^%s+", ""):gsub("%s+$", "")
-    end
-})
+ADMPanel:AddSection({"Galaxy Hub • Painel Administrativo"})
+ADMPanel:AddSection({"Administração local da sessão; permissões reais devem ser validadas no servidor."})
 
 local function admNotify(title, message)
-    pcall(function()
-        redzlib:Notify({Title = title, Text = message, Duration = 5})
-    end)
+    pcall(function() redzlib:Notify({Title = tostring(title), Text = tostring(message), Duration = 5}) end)
 end
 
-local function isGalaxyOwner()
-    return LocalPlayer and LocalPlayer.Name:lower() == "eobli7"
-end
-
-local function findAdminTarget(name)
-    local wanted = tostring(name or ""):lower()
+local function findPlayer(name)
+    local wanted = tostring(name or ""):lower():gsub("^%s+", ""):gsub("%s+$", "")
     if wanted == "" then return nil end
     for _, player in ipairs(Players:GetPlayers()) do
-        if player.Name:lower() == wanted or player.DisplayName:lower() == wanted then
-            return player
-        end
+        if player.Name:lower() == wanted or player.DisplayName:lower() == wanted then return player end
     end
     return nil
 end
 
-ADMPanel:AddButton({
-    Name = "Adicionar Admin",
-    Callback = function()
-        if not isGalaxyOwner() then
-            admNotify("Sem permissão", "Somente eobli7 pode gerenciar admins.")
-            return
-        end
-        local target = findAdminTarget(adminInput)
-        if not target then
-            admNotify("Galaxy Hub", "Jogador não encontrado nesta sessão.")
-            return
-        end
-        GalaxyAdmins[target.Name] = true
-        admNotify("Admin adicionado", target.Name .. " foi adicionado ao painel.")
-    end
-})
+local function isOwner() return LocalPlayer and LocalPlayer.Name:lower() == "eobli7" end
+local function isAdmin() return isOwner() or GalaxyAdmins[LocalPlayer.Name] == true end
+local function selectedTarget() return findPlayer(targetInput) end
+local function targetHumanoid(player)
+    local character = player and player.Character
+    return character and character:FindFirstChildOfClass("Humanoid")
+end
+local function targetRoot(player)
+    local character = player and player.Character
+    return character and character:FindFirstChild("HumanoidRootPart")
+end
+local function requireAdmin()
+    if not isAdmin() then admNotify("Sem permissão", "Somente eobli7 ou admins autorizados podem usar este painel."); return false end
+    return true
+end
 
-ADMPanel:AddButton({
-    Name = "Remover Admin",
-    Callback = function()
-        if not isGalaxyOwner() then
-            admNotify("Sem permissão", "Somente eobli7 pode gerenciar admins.")
-            return
-        end
-        local target = findAdminTarget(adminInput)
-        if not target then
-            admNotify("Galaxy Hub", "Jogador não encontrado nesta sessão.")
-            return
-        end
-        if target.Name:lower() == "eobli7" then
-            admNotify("Proteção", "O dono não pode ser removido.")
-            return
-        end
-        GalaxyAdmins[target.Name] = nil
-        admNotify("Admin removido", target.Name .. " foi removido do painel.")
-    end
-})
+ADMPanel:AddTextBox({Name="Jogador alvo", Description="Nome exato ou DisplayName", PlaceholderText="ex: NomeDoJogador", Callback=function(Value) targetInput=tostring(Value or ""):gsub("^%s+", ""):gsub("%s+$", "") end})
+ADMPanel:AddTextBox({Name="Velocidade", Description="Valor entre 16 e 100", PlaceholderText="ex: 30", Callback=function(Value) speedInput=math.clamp(tonumber(Value) or 16,16,100) end})
+ADMPanel:AddButton({Name="Selecionar jogador", Callback=function()
+    local target=selectedTarget()
+    if target then admNotify("Jogador selecionado", target.Name .. " (@" .. target.DisplayName .. ")") else admNotify("Galaxy Hub", "Jogador não encontrado nesta sessão.") end
+end})
 
-ADMPanel:AddButton({
-    Name = "Listar Admins",
-    Callback = function()
-        local list = {}
-        for name in pairs(GalaxyAdmins) do
-            table.insert(list, name == "eobli7" and "eobli7 (Dono)" or name .. " (Admin)")
-        end
-        table.sort(list)
-        admNotify("Galaxy Hub Admins", table.concat(list, ", "))
-    end
-})
+ADMPanel:AddSection({"Controle de jogador"})
+ADMPanel:AddButton({Name="Freeze", Callback=function()
+    if not requireAdmin() then return end
+    local h=targetHumanoid(selectedTarget())
+    if h then h.WalkSpeed=0; h.JumpPower=0; admNotify("ADM Panel", "Jogador congelado.") else admNotify("Galaxy Hub", "Alvo inválido.") end
+end})
+ADMPanel:AddButton({Name="Unfreeze", Callback=function()
+    if not requireAdmin() then return end
+    local h=targetHumanoid(selectedTarget())
+    if h then h.WalkSpeed=16; h.JumpPower=50; admNotify("ADM Panel", "Movimento restaurado.") else admNotify("Galaxy Hub", "Alvo inválido.") end
+end})
+ADMPanel:AddButton({Name="Aplicar velocidade", Callback=function()
+    if not requireAdmin() then return end
+    local h=targetHumanoid(selectedTarget())
+    if h then h.WalkSpeed=speedInput; admNotify("ADM Panel", "Velocidade aplicada.") else admNotify("Galaxy Hub", "Alvo inválido.") end
+end})
+ADMPanel:AddButton({Name="Sentar", Callback=function()
+    if not requireAdmin() then return end
+    local h=targetHumanoid(selectedTarget())
+    if h then h.Sit=true else admNotify("Galaxy Hub", "Alvo inválido.") end
+end})
+ADMPanel:AddButton({Name="Ir até jogador", Callback=function()
+    if not requireAdmin() then return end
+    local tr=targetRoot(selectedTarget()); local own=targetRoot(LocalPlayer)
+    if tr and own then own.CFrame=tr.CFrame; admNotify("ADM Panel", "Teleporte concluído.") else admNotify("Galaxy Hub", "Alvo inválido.") end
+end})
 
-ADMPanel:AddButton({
-    Name = "Atualizar lista de jogadores",
-    Callback = function()
-        admNotify("Galaxy Hub", "Jogadores online: " .. tostring(#Players:GetPlayers()))
-    end
-})
+ADMPanel:AddSection({"Gerenciar administradores"})
+ADMPanel:AddTextBox({Name="Username do Admin", Description="Somente eobli7 pode alterar a lista", PlaceholderText="ex: NomeDoJogador", Callback=function(Value) adminInput=tostring(Value or ""):gsub("^%s+", ""):gsub("%s+$", "") end})
+ADMPanel:AddButton({Name="Adicionar Admin", Callback=function()
+    if not isOwner() then admNotify("Sem permissão", "Somente eobli7 pode gerenciar admins."); return end
+    local target=findPlayer(adminInput)
+    if not target then admNotify("Galaxy Hub", "Jogador não encontrado nesta sessão."); return end
+    GalaxyAdmins[target.Name]=true; admNotify("Admin adicionado", target.Name .. " foi autorizado nesta sessão.")
+end})
+ADMPanel:AddButton({Name="Remover Admin", Callback=function()
+    if not isOwner() then admNotify("Sem permissão", "Somente eobli7 pode gerenciar admins."); return end
+    local target=findPlayer(adminInput)
+    if not target then admNotify("Galaxy Hub", "Jogador não encontrado nesta sessão."); return end
+    if target.Name:lower()=="eobli7" then admNotify("Proteção", "O dono não pode ser removido."); return end
+    GalaxyAdmins[target.Name]=nil; admNotify("Admin removido", target.Name .. " não está mais autorizado.")
+end})
+ADMPanel:AddButton({Name="Listar Admins", Callback=function()
+    local list={}
+    for name in pairs(GalaxyAdmins) do table.insert(list, name=="eobli7" and "eobli7 (Dono)" or name .. " (Admin)") end
+    table.sort(list); admNotify("Galaxy Hub Admins", table.concat(list, ", "))
+end})
+ADMPanel:AddButton({Name="Atualizar tags", Callback=function()
+    if not requireAdmin() then return end
+    admNotify("ADM Panel", "Lista de tags atualizada para a sessão.")
+end})
+
+ADMPanel:AddSection({"Utilitários e anúncios"})
+ADMPanel:AddButton({Name="Aviso administrativo", Callback=function()
+    if not requireAdmin() then return end
+    admNotify("Galaxy Hub • ADMIN", "Aviso administrativo ativado por " .. LocalPlayer.Name .. ".")
+end})
+ADMPanel:AddButton({Name="Verificar dono", Callback=function() admNotify("Galaxy Hub", isOwner() and "eobli7 identificado como Dono." or "Usuário não identificado como Dono.") end})
+ADMPanel:AddButton({Name="Quantidade online", Callback=function() admNotify("Galaxy Hub", "Jogadores online: " .. tostring(#Players:GetPlayers())) end})
+ADMPanel:AddButton({Name="Mostrar ajuda", Callback=function() admNotify("ADM Panel", "Use os campos de jogador e admin. A lista é local e vale apenas nesta sessão.") end})
+ADMPanel:AddSection({"Controles locais"})
+ADMPanel:AddButton({Name="Recarregar personagem", Callback=function()
+    if not requireAdmin() then return end
+    pcall(function() LocalPlayer:LoadCharacter() end)
+end})
+ADMPanel:AddButton({Name="Pular", Callback=function()
+    local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.Jump=true end
+end})
+ADMPanel:AddButton({Name="Super velocidade local", Callback=function()
+    local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=50 end
+end})
+ADMPanel:AddButton({Name="Velocidade normal local", Callback=function()
+    local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.WalkSpeed=16 end
+end})
+ADMPanel:AddButton({Name="PlatformStand local", Callback=function()
+    local c=LocalPlayer.Character; local h=c and c:FindFirstChildOfClass("Humanoid")
+    if h then h.PlatformStand=not h.PlatformStand end
+end})
+ADMPanel:AddButton({Name="Teleporte para spawn", Callback=function()
+    local own=targetRoot(LocalPlayer); local spawn=workspace:FindFirstChildWhichIsA("SpawnLocation",true)
+    if own and spawn then own.CFrame=spawn.CFrame+Vector3.new(0,4,0) end
+end})
+
+ADMPanel:AddSection({"Mundo e efeitos locais"})
+ADMPanel:AddButton({Name="Dia", Callback=function() game:GetService("Lighting").ClockTime=12 end})
+ADMPanel:AddButton({Name="Noite", Callback=function() game:GetService("Lighting").ClockTime=0 end})
+ADMPanel:AddButton({Name="Pôr do sol", Callback=function() game:GetService("Lighting").ClockTime=18 end})
+ADMPanel:AddButton({Name="Amanhecer", Callback=function() game:GetService("Lighting").ClockTime=6 end})
+ADMPanel:AddButton({Name="Gravidade normal", Callback=function() workspace.Gravity=196.2 end})
+ADMPanel:AddButton({Name="Sem gravidade local", Callback=function() workspace.Gravity=0 end})
+ADMPanel:AddButton({Name="Notificação de teste", Callback=function() admNotify("Galaxy Hub", "Sistema funcionando • eobli7") end})
+ADMPanel:AddButton({Name="Expansão de domínio visual", Callback=function() admNotify("EXPANSÃO DE DOMÍNIO", "Galaxy Hub • área visual ativada") end})
+
+ADMPanel:AddSection({"Informações e segurança"})
+ADMPanel:AddButton({Name="Jogadores online", Callback=function() admNotify("Jogadores", tostring(#Players:GetPlayers()) .. " online.") end})
+ADMPanel:AddButton({Name="Meu perfil", Callback=function() admNotify("Perfil", LocalPlayer.DisplayName .. " @" .. LocalPlayer.Name) end})
+ADMPanel:AddButton({Name="JobId do servidor", Callback=function() admNotify("Servidor", tostring(game.JobId)) end})
+ADMPanel:AddButton({Name="PlaceId", Callback=function() admNotify("PlaceId", tostring(game.PlaceId)) end})
+ADMPanel:AddButton({Name="Atualizar todas as tags", Callback=function()
+    for _, player in ipairs(Players:GetPlayers()) do pcall(function() createSpecialTag(player) end) end
+    admNotify("Segurança", "Tags atualizadas.")
+end})
+ADMPanel:AddButton({Name="Verificar dono", Callback=function()
+    admNotify("Dono", isOwner() and "eobli7 autorizado." or "Usuário não identificado como dono.")
+end})
 
 ADMPanel:AddSection({"Proteção: eobli7 permanece como Dono e não pode ser removido."})
+
